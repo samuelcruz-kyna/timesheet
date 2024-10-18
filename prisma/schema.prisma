@@ -1,0 +1,92 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Inquiries {
+  id            Int      @id @default(autoincrement())
+  firstName     String
+  lastName      String
+  contactNo     String
+  emailAddress  String
+  subject       String
+  message       String
+  status        String   @default("pending")
+  transactionNo String   @unique  // Ensure transactionNo is defined and unique
+  created       DateTime @default(now())
+  modified      DateTime @updatedAt
+}
+
+model Employee {
+  id         Int       @id @default(autoincrement())
+  firstName  String
+  lastName   String
+  gender     Gender
+  employeeNo String    @unique
+  Timesheets Timesheet[]
+  DailySummaries DailySummary[] // Add this line to create the relation with DailySummary 
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  User       User?     @relation("EmployeeUser") // Optional one-to-one relation with User
+  
+  
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  username   String    @unique
+  password   String
+  status     String    // You may want to use enums in the future for better type safety
+  employeeID String    @unique // Foreign key to Employee (linked via employeeNo)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  employee   Employee  @relation(fields: [employeeID], references: [employeeNo], name: "EmployeeUser")
+}
+
+model Timesheet {
+  id          Int      @id @default(autoincrement())
+  time        DateTime @default(now())
+  employeeID  Int      // Foreign key to User
+  type        String   // Type of the timesheet entry (Time-in, Time-out, Break)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee @relation(fields: [employeeID], references: [id])
+}
+
+model DailySummary {
+  id          Int        @id @default(autoincrement())
+  employeeId  Int        // Foreign key to Employee
+  date        DateTime   // The date for which the summary is calculated
+  totalTime   Int        // Total time in seconds
+  employee    Employee   @relation(fields: [employeeId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([employeeId, date]) 
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum InquiryStatus {
+  PENDING
+  READ
+}
+
+enum UserStatus {
+  LOGGED_IN
+  TIME_IN
+  BREAK
+  TIME_OUT
+}
