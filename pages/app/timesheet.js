@@ -1,15 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react"; 
 import { useSession } from "next-auth/react";
 import { Button } from '@/components/ui/button';
 import { useFormik } from 'formik';
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
+import { Poppins } from 'next/font/google';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import NavBar from '@/components/ui/navBar';
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '900'],
+});
 
 export default function Timesheet() {
   const { data: session, status } = useSession();
-  const [lastAction, setLastAction] = useState('');
-  const [dailySummaries, setDailySummaries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [lastAction, setLastAction] = useState(''); 
+  const [dailySummaries, setDailySummaries] = useState([]); 
+  const [loading, setLoading] = useState(true); 
 
   const [isTimeInLoading, setIsTimeInLoading] = useState(false);
   const [isBreakLoading, setIsBreakLoading] = useState(false);
@@ -20,8 +26,8 @@ export default function Timesheet() {
       try {
         const res = await fetch('/api/timesheet/summary');
         const data = await res.json();
-        setLastAction(data.lastAction || '');
-        setDailySummaries(data.dailySummaries || []);
+        setLastAction(data.lastAction || ''); 
+        setDailySummaries(data.dailySummaries || []); 
         setLoading(false);
       } catch (error) {
         console.error('Error fetching timesheet data:', error);
@@ -77,108 +83,112 @@ export default function Timesheet() {
   }
 
   return (
-    <div className="flex flex-col items-center bg-[var(--background)] text-[var(--foreground)] min-h-screen w-full font-helvetica">
+    <div className="flex flex-col min-h-screen bg-[var(--background)] text-[var(--foreground)] font-helvetica">
       <NavBar />
+      <h1 className="text-center text-5xl font-extrabold uppercase mt-24 mb-12">Daily Timesheet</h1>
 
-      <div className="mt-24 w-full max-w-4xl px-6">
-        <h1 className="text-center text-5xl font-extrabold uppercase text-[var(--foreground)] mb-8">Daily Timesheet</h1>
-
-        {lastAction === 'TIME_OUT' ? (
-          <p className="text-xl text-white mb-8 text-center">
-            You have logged a total of <b>{dailySummaries[0]?.totalTime || '00:00:00'}</b> hours today.
-          </p>
-        ) : lastAction === 'BREAK' ? (
-          <p className="text-xl text-white mb-8 text-center">
-            You have worked for <b>{dailySummaries[0]?.totalTime || '00:00:00'}</b> so far. Ready to resume?
-          </p>
-        ) : lastAction === 'TIME_IN' ? (
-          <p className="text-xl text-white mb-8 text-center">
-            Your timer is active. Click <b>Break</b> to pause or <b>Time Out</b> to stop.
-          </p>
-        ) : (
-          <p className="text-xl text-white mb-8 text-center">
-            Click <b>Time In</b> to start tracking your work hours.
-          </p>
-        )}
-
-        {/* Summary Table */}
-        <div className="p-5 rounded-xl border border-gray-700 mb-10">
-          <Table className="min-w-full">
-            <TableRow>
+      <div className="container mx-auto p-8 rounded-xl border border-gray-700">
+        <Table className="w-full table-auto">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead>ID</TableHead>
               <TableHead>Employee Name</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Time Span</TableHead>
             </TableRow>
-            <TableBody>
-              {dailySummaries.length > 0 ? (
-                dailySummaries.map((summary, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{summary.fullName}</TableCell>
-                    <TableCell>{convertDateToLocal(summary.date)}</TableCell>
-                    <TableCell>{calculateDuration(summary.timeSpan)}</TableCell> {/* Display calculated duration */}
-                    <TableCell>{convertTimeSpanToLocal(summary.timeSpan)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10">
-                    You have no records for today.
-                  </TableCell>
+          </TableHeader>
+          <TableBody>
+            {dailySummaries.length > 0 ? (
+              dailySummaries.map((summary, index) => (
+                <TableRow key={index} className="hover:bg-transparent">
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{summary.fullName}</TableCell>
+                  <TableCell>{convertDateToLocal(summary.date)}</TableCell>
+                  <TableCell>{summary.totalTime}</TableCell> {/* Maintaining original duration logic */}
+                  <TableCell>{convertTimeSpanToLocal(summary.timeSpan)}</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Time In/Out/Break Form */}
-        <form onSubmit={formik.handleSubmit} className="flex flex-row justify-between items-center p-5 rounded-xl border border-gray-700">
-          <Button
-            variant="default"
-            type="button"
-            className="p-3 bg-transparent border border-gray-700 text-white rounded-md hover:bg-gradient-to-r hover:from-[#4a4a4a] hover:to-[#b3b3b3] transition-all duration-300"
-            onClick={async () => {
-              setIsTimeInLoading(true);
-              await formik.setFieldValue('action', 'TIME_IN');
-              await formik.submitForm();
-              setIsTimeInLoading(false);
-            }}
-            disabled={isTimeInLoading || (!isInitialState && isTimeInDisabled)}
-          >
-            {isTimeInLoading ? 'Processing...' : 'Time In'}
-          </Button>
-
-          <Button
-            variant="default"
-            type="button"
-            className="p-3 bg-transparent border border-gray-700 text-white rounded-md hover:bg-gradient-to-r hover:from-[#4a4a4a] hover:to-[#b3b3b3] transition-all duration-300"
-            onClick={async () => {
-              setIsBreakLoading(true);
-              await formik.setFieldValue('action', 'BREAK');
-              await formik.submitForm();
-              setIsBreakLoading(false);
-            }}
-            disabled={isBreakLoading || isBreakDisabled}
-          >
-            {isBreakLoading ? 'Processing...' : 'Break'}
-          </Button>
-
-          <Button
-            variant="default"
-            type="button"
-            className="p-3 bg-transparent border border-gray-700 text-white rounded-md hover:bg-gradient-to-r hover:from-[#4a4a4a] hover:to-[#b3b3b3] transition-all duration-300"
-            onClick={async () => {
-              setIsTimeOutLoading(true);
-              await formik.setFieldValue('action', 'TIME_OUT');
-              await formik.submitForm();
-              setIsTimeOutLoading(false);
-            }}
-            disabled={isTimeOutLoading || isTimeOutDisabled}
-          >
-            {isTimeOutLoading ? 'Processing...' : 'Time Out'}
-          </Button>
-        </form>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center pt-10 pb-5">
+                  You have no records for today.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
+
+      {/* Duration Display */}
+      {lastAction === 'TIME_OUT' ? (
+        <p className={`${poppins.className} text-xl text-center mt-8`}>
+          You have logged a total of <b>{dailySummaries[0]?.totalTime || '00:00:00'}</b> hours today.
+        </p>
+      ) : lastAction === 'BREAK' ? (
+        <p className={`${poppins.className} text-xl text-center mt-8`}>
+          You have worked for <b>{dailySummaries[0]?.totalTime || '00:00:00'}</b> so far.
+        </p>
+      ) : lastAction === 'TIME_IN' ? (
+        <p className={`${poppins.className} text-xl text-center mt-8`}>
+          Your timer is active. Click <b>Break</b> to pause or <b>Time Out</b> to stop.
+        </p>
+      ) : (
+        <p className={`${poppins.className} text-xl text-center mt-8`}>
+          Click <b>Time In</b> to start tracking your work hours.
+        </p>
+      )}
+
+      {/* Time In/Out/Break Form */}
+      <form
+        onSubmit={formik.handleSubmit}
+        className="flex flex-row justify-center items-center gap-5 p-5 rounded-lg mt-10 w-full max-w-6xl"
+      >
+        <Button
+          variant="default"
+          type="button"
+          className="p-3 w-full bg-[var(--dark-grey)] text-white rounded-md hover:bg-gradient-to-r from-blue-400 to-purple-600 transition-colors duration-300 border border-white hover:border-black"
+          onClick={async () => {
+            setIsTimeInLoading(true);
+            await formik.setFieldValue('action', 'TIME_IN');
+            await formik.submitForm();
+            setIsTimeInLoading(false);
+          }}
+          disabled={isTimeInLoading || (!isInitialState && isTimeInDisabled)}
+        >
+          {isTimeInLoading ? 'Processing...' : 'Time In'}
+        </Button>
+
+        <Button
+          variant="default"
+          type="button"
+          className="p-3 w-full bg-[var(--dark-grey)] text-white rounded-md hover:bg-gradient-to-r from-green-400 to-teal-600 transition-colors duration-300 border border-white hover:border-black"
+          onClick={async () => {
+            setIsBreakLoading(true);
+            await formik.setFieldValue('action', 'BREAK');
+            await formik.submitForm();
+            setIsBreakLoading(false);
+          }}
+          disabled={isBreakLoading || isBreakDisabled}
+        >
+          {isBreakLoading ? 'Processing...' : 'Break'}
+        </Button>
+
+        <Button
+          variant="default"
+          type="button"
+          className="p-3 w-full bg-[var(--dark-grey)] text-white rounded-md hover:bg-gradient-to-r from-red-400 to-pink-600 transition-colors duration-300 border border-white hover:border-black"
+          onClick={async () => {
+            setIsTimeOutLoading(true);
+            await formik.setFieldValue('action', 'TIME_OUT');
+            await formik.submitForm();
+            setIsTimeOutLoading(false);
+          }}
+          disabled={isTimeOutLoading || isTimeOutDisabled}
+        >
+          {isTimeOutLoading ? 'Processing...' : 'Time Out'}
+        </Button>
+      </form>
     </div>
   );
 }
@@ -223,22 +233,4 @@ function convertDateToLocal(utcDateString) {
   return utcDate.toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
   });
-}
-
-// Helper function to calculate the duration between timeIn and timeOut
-function calculateDuration(timeSpan) {
-  if (!timeSpan) return "00:00:00";
-  
-  const [startTimeUTC, endTimeUTC] = timeSpan.split(' to ').map((time) => time.trim());
-  if (!endTimeUTC) return "00:00:00";
-
-  const startTime = new Date(`1970-01-01T${convertTo24HourFormat(startTimeUTC)}Z`);
-  const endTime = new Date(`1970-01-01T${convertTo24HourFormat(endTimeUTC)}Z`);
-
-  const durationInSeconds = (endTime - startTime) / 1000; // Calculate duration in seconds
-  const hours = Math.floor(durationInSeconds / 3600);
-  const minutes = Math.floor((durationInSeconds % 3600) / 60);
-  const seconds = durationInSeconds % 60;
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }

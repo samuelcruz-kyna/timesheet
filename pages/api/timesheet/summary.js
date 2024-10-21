@@ -13,32 +13,17 @@ function formatTimeInHHMMSS(totalTimeInSeconds) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-// Helper function to calculate the duration between two timestamps
-function calculateDuration(timeIn, timeOut) {
-  if (!timeIn || !timeOut) return '00:00:00'; // If either timeIn or timeOut is missing, return 0 duration
-
-  const timeInDate = new Date(timeIn);
-  const timeOutDate = new Date(timeOut);
-
-  const durationInSeconds = (timeOutDate - timeInDate) / 1000; // Calculate duration in seconds
-  return formatTimeInHHMMSS(durationInSeconds);
-}
-
 // Helper function to format date in a user-friendly format
 function formatDateForDisplay(date) {
-  if (!date) return 'Invalid Date';
-  const utcDate = new Date(date);
-  return utcDate.toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  return new Date(date).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC',
   });
 }
 
 // Helper function to format time in a user-friendly format
 function formatTimeForDisplay(date) {
-  if (!date) return 'Invalid Time';
-  const utcDate = new Date(date);
-  return utcDate.toLocaleTimeString('en-US', {
-    hour: '2-digit', minute: '2-digit',
+  return new Date(date).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
   });
 }
 
@@ -51,7 +36,7 @@ async function getEmployeeDetails(employeeNo) {
       firstName: true,
       lastName: true,
     },
-  });
+  }); 
 }
 
 // Helper function to fetch past daily summaries for the employee
@@ -69,20 +54,20 @@ async function getAllDailySummaries(employeeId) {
 // Helper function to get the start and end of the current day in UTC
 function getUTCDateRange() {
   const now = new Date();
-
+  
   // Start of today in UTC
   const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-
+  
   // Start of tomorrow in UTC
   const startOfTomorrowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-
+  
   return { start: startOfTodayUTC, end: startOfTomorrowUTC };
 }
 
 // Helper function to fetch the latest action for today
 async function getLastActionToday(employeeId) {
   const { start, end } = getUTCDateRange();
-
+  
   const latestTimesheetEntry = await prisma.timesheet.findFirst({
     where: {
       employeeID: employeeId,
@@ -133,14 +118,10 @@ export default async function handler(req, res) {
 
     // Map through each daily summary to format the response
     const formattedSummaries = dailySummaries.map((summary) => {
-      const summaryDate = formatDateForDisplay(summary.date);
+      const summaryDate = new Date(summary.date);
       const timeIn = formatTimeForDisplay(summary.createdAt);
       const timeOut = formatTimeForDisplay(summary.updatedAt);
       const timeSpan = timeOut ? `${timeIn} to ${timeOut}` : `${timeIn}`; // Handle cases with only TIME_IN
-
-      // Calculate duration based on timeIn and timeOut
-      const duration = calculateDuration(summary.createdAt, summary.updatedAt);
-
       const totalTimeFormatted = formatTimeInHHMMSS(summary.totalTime);
 
       return {
@@ -149,8 +130,9 @@ export default async function handler(req, res) {
         timeIn,
         timeOut,
         timeSpan,
-        duration,  // Include calculated duration in the response
-        date: summaryDate,
+        date: formatDateForDisplay(summaryDate),
+        createdAt: summary.createdAt, // Optional: Include raw dates if needed
+        updatedAt: summary.updatedAt, // Optional: Include raw dates if needed
       };
     });
 
