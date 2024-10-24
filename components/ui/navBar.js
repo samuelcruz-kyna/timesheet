@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react"; 
+import { useSession, signOut } from "next-auth/react";
 import routes from '@/routes';
 import { useState, useEffect } from "react";
 
@@ -71,6 +71,14 @@ export default function NavBar() {
                 className="text-white hover:bg-gradient-to-r hover:from-[#4a4a4a] hover:to-[#b3b3b3] bg-clip-text hover:text-transparent transition-all duration-300"
               >
                 Inquiries
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={routes.employee}  // Correctly referencing the employee route
+                className="text-white hover:bg-gradient-to-r hover:from-[#4a4a4a] hover:to-[#b3b3b3] bg-clip-text hover:text-transparent transition-all duration-300"
+              >
+                Employee
               </Link>
             </li>
             <li>

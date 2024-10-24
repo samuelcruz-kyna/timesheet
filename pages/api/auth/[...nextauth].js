@@ -14,27 +14,21 @@ export const authOptions = {
         password: { label: 'Password', type: 'password' }
       },
       authorize: async (credentials) => {
-        try {
-          const user = await prisma.user.findUnique({
-            where: { username: credentials.username },
-          });
-
-          if (!user) {
-            console.error('User not found');
-            return null; // User not found
+        const user = await prisma.user.findUnique({
+          where: { username: credentials.username },
+          include: {
+            employee: true, // Include employee details (firstName, lastName)
           }
+        });
 
-          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-          if (!isPasswordValid) {
-            console.error('Invalid password');
-            return null; // Invalid password
-          }
-
-          return user; // Return user object on success
-        } catch (error) {
-          console.error('Error in authorize method:', error);
-          return null; // Handle any unexpected errors
+        if (user && await bcrypt.compare(credentials.password, user.password)) {
+          return {
+            ...user,
+            firstName: user.employee.firstName, // Add firstName from employee data
+            lastName: user.employee.lastName,   // Add lastName from employee data
+          };
         }
+        return null;  // Return null if login fails
       }
     })
   ],
@@ -50,6 +44,8 @@ export const authOptions = {
         token.id = user.id;
         token.username = user.username;
         token.employeeID = user.employeeID;
+        token.firstName = user.firstName;  // Add firstName to the token
+        token.lastName = user.lastName;    // Add lastName to the token
       }
       return token;
     },
@@ -59,6 +55,8 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.username = token.username;
         session.user.employeeID = token.employeeID;
+        session.user.firstName = token.firstName; 
+        session.user.lastName = token.lastName;  
       }
       return session;
     }

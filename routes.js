@@ -8,6 +8,7 @@ const routes = {
     inquiries: '/app/inquiries',
     editInquiries: '/app/inquiries/edit/[transactionNo]',
     viewInquiries: '/app/inquiries/view/[transactionNo]',
+    employee: '/app/employee',  
 };
 
 export default routes;
