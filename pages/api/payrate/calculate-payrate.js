@@ -59,10 +59,12 @@ export default async function handler(req, res) {
       let payAmount = 0;
 
       if (payRateSchedule === 'Hourly') {
-        payAmount = (summary.totalTime / 3600) * payRate;
+        // Convert `totalTime` (in seconds) to hours and multiply by the `payRate`
+        const hoursWorked = summary.totalTime / 3600;
+        payAmount = hoursWorked * payRate;
       } 
       else if (payRateSchedule === 'Daily') {
-        payAmount = payRate;
+        payAmount = payRate; // Fixed daily rate
       } 
       else {
         return res.status(400).json({ error: 'Invalid payRateSchedule' });

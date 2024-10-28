@@ -1,5 +1,7 @@
-import NavBar from '@/components/ui/navBar';
+import NavBar from "@/components/ui/navBar";
 import { useSession } from "next-auth/react";
+import { PaymentChart } from "@/components/ui/payment-chart";
+import { TimesheetTable } from "@/components/ui/timesheet-table"; // Adjust the path if necessary
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -9,19 +11,30 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen">
+    <div className="flex flex-col items-center h-screen p-5 font-satoshi bg-white text-black">
       <NavBar />
-      <div>
+      <div className="w-full max-w-6xl mt-10">
         {session ? (
-          <h1 className="mt-40 text-center text-5xl font-satoshi-bold uppercase">
-            Welcome,
-            <br />
-            <span className="bg-gradient-to-r from-[#4a4a4a] to-[#b3b3b3] bg-clip-text text-transparent">
-              {session.user.username}!
-            </span>
-          </h1>
+          <>
+            <h1 className="text-center text-[3rem] mb-20 font-semibold text-gray-800">
+              Welcome, <span className="font-satoshi-regular">{session.user.username}</span>!
+            </h1>
+
+            <div className="grid grid-cols-2 gap-8">
+              {/* Payments Chart */}
+              <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
+                <PaymentChart />
+              </div>
+
+              {/* Timesheet Table */}
+              <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
+                {/* Render only the TimesheetTable component */}
+                <TimesheetTable endpoint="/api/timesheet/get-timesheet" />
+              </div>
+            </div>
+          </>
         ) : (
-          <h2 className="mt-40 text-center text-5xl font-satoshi-bold uppercase">
+          <h2 className="mt-40 text-center text-5xl font-satoshi-regular uppercase text-gray-800">
             Welcome, Guest
           </h2>
         )}

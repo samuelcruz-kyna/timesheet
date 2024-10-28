@@ -93,7 +93,7 @@ function groupByMonth(records) {
 
     if (!months[key]) {
       months[key] = {
-        date: `${monthName} ${year}`,
+        date: `${monthName} ${year}`, // Display month and year only
         payAmount: 0,
         duration: 0,
         sortKey,
@@ -149,7 +149,7 @@ export default async function handler(req, res) {
     } else if (filter === 'weekly') {
       groupedRecords = groupByWeek(paymentRecords);
     } else if (filter === 'monthly') {
-      groupedRecords = groupByMonth(paymentRecords);
+      groupedRecords = groupByMonth(paymentRecords); // Only monthly records, no daily/weekly
     } else {
       groupedRecords = paymentRecords.map((record) => ({
         date: formatDateForDisplay(record.date),
