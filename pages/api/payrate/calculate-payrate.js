@@ -5,13 +5,18 @@ import { authOptions } from '@/pages/api/auth/[...nextauth]';
 
 const prisma = new PrismaClient();
 
+function formatDuration(seconds) {
+  const hours = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+  const secs = String(seconds % 60).padStart(2, '0');
+  return `${hours}:${minutes}:${secs}`;
+}
+
 export default async function handler(req, res) {
   try {
-    // 1. Validate the data using the "employeePayrateFormSchema".
     const validatedData = await employeePayrateFormSchema.validate(req.body);
     const { payRate, payRateSchedule, effectiveDate } = validatedData;
 
-    // 2. Get the current user and employeeId.
     const session = await getServerSession(req, res, authOptions);
     const employeeNo = session?.user.employeeID;
     const employee = await prisma.employee.findUnique({
@@ -22,7 +27,6 @@ export default async function handler(req, res) {
     }
     const employeeId = employee.id;
 
-    // 3. Save the payRate, payRateSchedule, and effectiveDate of this user in PayRate table. Upsert it so there will be only 1 record.
     await prisma.payRate.upsert({
       where: { employeeId },
       update: {
@@ -39,7 +43,6 @@ export default async function handler(req, res) {
       },
     });
 
-    // 4. Fetch all daily summaries of this employee where date is the effectiveDate or later
     const dailySummaries = await prisma.dailySummary.findMany({
       where: {
         employeeId: employeeId,
@@ -49,27 +52,22 @@ export default async function handler(req, res) {
       }
     });  
 
-    // 5. Process the payroll calculations.
     const paymentRecords = [];
 
     for (const summary of dailySummaries) {
-      // Calculate duration (in hours) from totalTime (in seconds)
-      const duration = summary.totalTime / 3600;
-
-      // Determine the pay amount
+      const duration = formatDuration(summary.totalTime); // Format duration as HH:MM:SS
       let payAmount = 0;
 
       if (payRateSchedule === 'Hourly') {
-        payAmount = duration * payRate;
+        payAmount = (summary.totalTime / 3600) * payRate;
       } 
       else if (payRateSchedule === 'Daily') {
-        payAmount = payRate; // Fixed daily rate
+        payAmount = payRate;
       } 
       else {
         return res.status(400).json({ error: 'Invalid payRateSchedule' });
       }
 
-      // Upsert the calculated payment.
       const paymentRecord = await prisma.paymentRecord.upsert({
         where: {
           employeeId_date: {
@@ -89,8 +87,7 @@ export default async function handler(req, res) {
         },
       });
 
-      // Add the record with calculated duration to the response array
-      paymentRecords.push({ ...paymentRecord, duration });
+      paymentRecords.push({ ...paymentRecord, duration }); // Add formatted duration
     }
 
     return res.status(200).json({ paymentRecords });

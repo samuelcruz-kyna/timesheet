@@ -4,7 +4,6 @@ import { authOptions } from '@/pages/api/auth/[...nextauth]';
 
 const prisma = new PrismaClient();
 
-// Helper function to format date in a user-friendly format
 function formatDateForDisplay(date) {
   return new Date(date).toLocaleDateString('en-US', {
     weekday: 'short',
@@ -15,7 +14,6 @@ function formatDateForDisplay(date) {
   });
 }
 
-// Helper function to format a date range
 function formatWeekRange(startDate, endDate) {
   const startOptions = { month: 'short', day: 'numeric' };
   const endOptions = { month: 'short', day: 'numeric' };
@@ -26,7 +24,6 @@ function formatWeekRange(startDate, endDate) {
   return `${start} to ${end}`;
 }
 
-// Helper function to get the Monday of the week for a given date
 function getMonday(d) {
   d = new Date(d);
   const day = d.getUTCDay();
@@ -35,7 +32,13 @@ function getMonday(d) {
   return d;
 }
 
-// Function to group payment records by week
+function formatDuration(seconds) {
+  const hours = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+  const secs = String(seconds % 60).padStart(2, '0');
+  return `${hours}:${minutes}:${secs}`;
+}
+
 function groupByWeek(records) {
   if (records.length === 0) return [];
 
@@ -55,7 +58,7 @@ function groupByWeek(records) {
         weeks.push({
           date: formatWeekRange(currentMonday, currentSunday),
           payAmount: currentWeek.reduce((sum, r) => sum + r.payAmount, 0),
-          duration: currentWeek.reduce((sum, r) => sum + (r.dailySummary?.totalTime || 0) / 3600, 0),
+          duration: formatDuration(currentWeek.reduce((sum, r) => sum + (r.dailySummary?.totalTime || 0), 0)),
         });
       }
 
@@ -70,14 +73,13 @@ function groupByWeek(records) {
     weeks.push({
       date: formatWeekRange(currentMonday, currentSunday),
       payAmount: currentWeek.reduce((sum, r) => sum + r.payAmount, 0),
-      duration: currentWeek.reduce((sum, r) => sum + (r.dailySummary?.totalTime || 0) / 3600, 0),
+      duration: formatDuration(currentWeek.reduce((sum, r) => sum + (r.dailySummary?.totalTime || 0), 0)),
     });
   }
 
   return weeks;
 }
 
-// Helper function to group records by month
 function groupByMonth(records) {
   const months = {};
 
@@ -98,10 +100,13 @@ function groupByMonth(records) {
       };
     }
     months[key].payAmount += record.payAmount;
-    months[key].duration += (record.dailySummary?.totalTime || 0) / 3600;
+    months[key].duration += record.dailySummary?.totalTime || 0;
   });
 
-  return Object.values(months).sort((a, b) => b.sortKey - a.sortKey);
+  return Object.values(months).map((month) => ({
+    ...month,
+    duration: formatDuration(month.duration), // Format monthly duration
+  })).sort((a, b) => b.sortKey - a.sortKey);
 }
 
 export default async function handler(req, res) {
@@ -136,31 +141,26 @@ export default async function handler(req, res) {
     let groupedRecords = [];
 
     if (filter === 'daily') {
-      groupedRecords = paymentRecords.map((record        ) => ({
+      groupedRecords = paymentRecords.map((record) => ({
         date: formatDateForDisplay(record.date),
         payAmount: record.payAmount,
-        duration: (record.dailySummary?.totalTime || 0) / 3600, // Calculate daily duration
+        duration: formatDuration(record.dailySummary?.totalTime || 0), // Format daily duration
       }));
-  } else if (filter === 'weekly') {
-    // Group records by week
-    groupedRecords = groupByWeek(paymentRecords);
-  } else if (filter === 'monthly') {
-    // Group records by month
-    groupedRecords = groupByMonth(paymentRecords);
-  } else {
-    // Default to daily if filter is invalid
-    groupedRecords = paymentRecords.map((record) => ({
-      date: formatDateForDisplay(record.date),
-      payAmount: record.payAmount,
-      duration: (record.dailySummary?.totalTime || 0) / 3600, // Calculate daily duration
-    }));
+    } else if (filter === 'weekly') {
+      groupedRecords = groupByWeek(paymentRecords);
+    } else if (filter === 'monthly') {
+      groupedRecords = groupByMonth(paymentRecords);
+    } else {
+      groupedRecords = paymentRecords.map((record) => ({
+        date: formatDateForDisplay(record.date),
+        payAmount: record.payAmount,
+        duration: formatDuration(record.dailySummary?.totalTime || 0), // Format daily duration
+      }));
+    }
+
+    return res.status(200).json(groupedRecords);
+  } catch (error) {
+    console.error('Error fetching payment records:', error);
+    return res.status(400).json({ message: error.message });
   }
-
-  // Respond with the grouped payment records
-  return res.status(200).json(groupedRecords);
-} catch (error) {
-  console.error('Error fetching payment records:', error);
-  return res.status(400).json({ message: error.message });
 }
-}
-
