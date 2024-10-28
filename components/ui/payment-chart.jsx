@@ -32,6 +32,19 @@ export function PaymentChart() {
     fetchData();
   }, [filter]);
 
+  const getYAxisDomain = () => {
+    switch (filter) {
+      case "daily":
+        return [0, 120];
+      case "weekly":
+        return [0, 600];
+      case "monthly":
+        return [0, 2000];
+      default:
+        return [0, 'auto'];
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -61,16 +74,16 @@ export function PaymentChart() {
             width={400}
             height={300}
             data={chartData}
-            margin={{ top: 20, right: 10, left: 10, bottom: 20 }} // Add some top and bottom margin
+            margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />
-            <YAxis domain={[0, 120]} /> {/* Adjust the domain to [0, 120] or as needed */}
+            <YAxis domain={getYAxisDomain()} />
             <Tooltip cursor={{ fill: "none" }} />
             <Bar
               dataKey="payAmount"
               fill="#1F2937"
-              radius={[10, 10, 0, 0]}
+              radius={[4, 4, 0, 0]} // Adjusted to subtle rounded corners at the top
               barSize={20}
             />
           </BarChart>
