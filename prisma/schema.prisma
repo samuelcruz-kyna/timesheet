@@ -1,4 +1,5 @@
 // prisma/schema.prisma
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -17,73 +18,89 @@ model Inquiries {
   subject       String
   message       String
   status        String   @default("pending")
-  transactionNo String   @unique  // Ensure transactionNo is defined and unique
+  transactionNo String   @unique
   created       DateTime @default(now())
   modified      DateTime @updatedAt
 }
 
 model Employee {
-  id            Int            @id @default(autoincrement())
-  firstName     String
-  lastName      String
-  gender        Gender
-  employeeNo    String         @unique
-  Timesheets    Timesheet[]    // One-to-many relation with Timesheet
-  DailySummaries DailySummary[] // One-to-many relation with DailySummary
-  PaymentRecords PaymentRecord[] // One-to-many relation with PaymentRecord
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             Int            @id @default(autoincrement())
+  firstName      String
+  lastName       String
+  gender         Gender
+  employeeNo     String         @unique
+  Timesheets     Timesheet[]
+  DailySummaries DailySummary[]
+  PaymentRecords PaymentRecord[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
-  User          User?          @relation("EmployeeUser") // Optional one-to-one relation with User
+  User           User?          @relation("EmployeeUser")
+  payRate        PayRate?
 }
 
 model User {
-  id         Int         @id @default(autoincrement())
-  username   String      @unique
+  id         Int      @id @default(autoincrement())
+  username   String   @unique
   password   String
-  status     String      @default("ACTIVE")
-  employeeID String      @unique // Foreign key to Employee (linked via employeeNo)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  status     String   @default("ACTIVE")
+  employeeID String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  employee   Employee    @relation(fields: [employeeID], references: [employeeNo], name: "EmployeeUser")
+  employee   Employee @relation(fields: [employeeID], references: [employeeNo], name: "EmployeeUser")
 }
 
 model Timesheet {
   id         Int      @id @default(autoincrement())
-  time       DateTime @default(now())  // Log time when this entry is created
-  type       String   // Type of the timesheet entry (Time-in, Time-out, Break)
-  employeeID Int      // Foreign key to Employee
+  time       DateTime @default(now())
+  type       String
+  employeeID Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  employee   Employee  @relation(fields: [employeeID], references: [id])
+  employee   Employee @relation(fields: [employeeID], references: [id])
 }
 
 model DailySummary {
-  id          Int        @id @default(autoincrement())
-  employeeId  Int        // Foreign key to Employee
-  date        DateTime   // The date for which the summary is calculated
-  totalTime   Int        // Total time in seconds
-  employee    Employee   @relation(fields: [employeeId], references: [id])
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  @@unique([employeeId, date]) 
+  id            Int            @id @default(autoincrement())
+  employeeId    Int
+  date          DateTime
+  totalTime     Int
+  employee      Employee       @relation(fields: [employeeId], references: [id])
+  paymentRecord PaymentRecord? @relation("dailySummary")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([employeeId, date])
 }
 
 model PaymentRecord {
-  id            Int      @id @default(autoincrement())
-  employeeId    Int      // Foreign key to Employee
-  date          DateTime // Start date of the payment period (e.g., Daily)
-  payAmount     Float    // Total calculated pay for that period
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             Int           @id @default(autoincrement())
+  employeeId     Int
+  date           DateTime
+  payAmount      Float
+  dailySummaryId Int           @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  employee      Employee @relation(fields: [employeeId], references: [id])
+  employee      Employee      @relation(fields: [employeeId], references: [id])
+  dailySummary  DailySummary  @relation(fields: [dailySummaryId], references: [id], name: "dailySummary")
 
-  @@unique([employeeId, date]) // Ensure one record per employee per day
+  @@unique([employeeId, date])
 }
 
+model PayRate {
+  id               Int      @id @default(autoincrement())
+  employeeId       Int      @unique
+  payRate          Float
+  payRateSchedule  String
+  effectiveDate    DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  employee         Employee @relation(fields: [employeeId], references: [id])
+}
 
 enum Gender {
   MALE

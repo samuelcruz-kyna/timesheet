@@ -2,14 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from '@/components/ui/button';
 import { useFormik } from 'formik';
-import { Poppins } from 'next/font/google';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import NavBar from '@/components/ui/navBar';
-
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '900'],
-});
 
 export default function Timesheet() {
   const { data: session, status } = useSession();
@@ -17,6 +11,7 @@ export default function Timesheet() {
   const [dailySummaries, setDailySummaries] = useState([]); 
   const [loading, setLoading] = useState(true); 
 
+  // Define loading states
   const [isTimeInLoading, setIsTimeInLoading] = useState(false);
   const [isBreakLoading, setIsBreakLoading] = useState(false);
   const [isTimeOutLoading, setIsTimeOutLoading] = useState(false);
@@ -73,6 +68,7 @@ export default function Timesheet() {
     },
   });
 
+  // Define disabled button states
   const isTimeInDisabled = lastAction === 'TIME_IN' || lastAction === 'TIME_OUT';
   const isBreakDisabled = lastAction !== 'TIME_IN' || lastAction === 'TIME_OUT';
   const isTimeOutDisabled = lastAction === 'TIME_OUT' || lastAction === '' || lastAction === 'BREAK';
@@ -83,14 +79,14 @@ export default function Timesheet() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--background)] text-[var(--foreground)] font-helvetica">
+    <div className="flex flex-col min-h-screen bg-[var(--background)] text-[var(--foreground)] font-satoshi-regular">
       <NavBar />
-      <h1 className="text-center text-5xl font-extrabold uppercase mt-24 mb-12">Daily Timesheet</h1>
+      <h1 className="text-center text-5xl font-satoshi-bold uppercase mt-24 mb-12">Daily Timesheet</h1>
 
-      <div className="container mx-auto p-8 rounded-xl border border-gray-700">
-        <Table className="w-full table-auto">
+      <div className="container mx-auto p-8 rounded-xl border border-black">
+        <Table className="w-full table-auto border-collapse">
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
+            <TableRow>
               <TableHead>ID</TableHead>
               <TableHead>Employee Name</TableHead>
               <TableHead>Date</TableHead>
@@ -101,16 +97,16 @@ export default function Timesheet() {
           <TableBody>
             {dailySummaries.length > 0 ? (
               dailySummaries.map((summary, index) => (
-                <TableRow key={index} className="hover:bg-transparent">
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell>{summary.fullName}</TableCell>
-                  <TableCell>{convertDateToLocal(summary.date)}</TableCell>
-                  <TableCell>{summary.totalTime}</TableCell> {/* Maintaining original duration logic */}
-                  <TableCell>{convertTimeSpanToLocal(summary.timeSpan)}</TableCell>
+                <TableRow key={index} className="border-t border-black hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-300">
+                  <TableCell className="border-none">{index + 1}</TableCell>
+                  <TableCell className="border-none">{summary.fullName}</TableCell>
+                  <TableCell className="border-none">{convertDateToLocal(summary.date)}</TableCell>
+                  <TableCell className="border-none">{summary.totalTime}</TableCell>
+                  <TableCell className="border-none">{convertTimeSpanToLocal(summary.timeSpan)}</TableCell>
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow className="border-t border-black">
                 <TableCell colSpan={5} className="text-center pt-10 pb-5">
                   You have no records for today.
                 </TableCell>
@@ -120,26 +116,26 @@ export default function Timesheet() {
         </Table>
       </div>
 
-      {/* Duration Display */}
+      {/* Status messages based on last action */}
       {lastAction === 'TIME_OUT' ? (
-        <p className={`${poppins.className} text-xl text-center mt-8`}>
+        <p className="text-xl text-center mt-8">
           You have logged a total of <b>{dailySummaries[0]?.totalTime || '00:00:00'}</b> hours today.
         </p>
       ) : lastAction === 'BREAK' ? (
-        <p className={`${poppins.className} text-xl text-center mt-8`}>
+        <p className="text-xl text-center mt-8">
           You have worked for <b>{dailySummaries[0]?.totalTime || '00:00:00'}</b> so far.
         </p>
       ) : lastAction === 'TIME_IN' ? (
-        <p className={`${poppins.className} text-xl text-center mt-8`}>
+        <p className="text-xl text-center mt-8">
           Your timer is active. Click <b>Break</b> to pause or <b>Time Out</b> to stop.
         </p>
       ) : (
-        <p className={`${poppins.className} text-xl text-center mt-8`}>
+        <p className="text-xl text-center mt-8">
           Click <b>Time In</b> to start tracking your work hours.
         </p>
       )}
 
-      {/* Time In/Out/Break Form */}
+      {/* Buttons for Time In, Break, and Time Out */}
       <form
         onSubmit={formik.handleSubmit}
         className="flex flex-row justify-center items-center gap-5 p-5 rounded-lg mt-10 w-full max-w-6xl"
@@ -147,7 +143,7 @@ export default function Timesheet() {
         <Button
           variant="default"
           type="button"
-          className="p-3 w-full bg-[var(--dark-grey)] text-white rounded-md hover:bg-gradient-to-r from-blue-400 to-purple-600 transition-colors duration-300 border border-white hover:border-black"
+          className="p-3 w-full bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black"
           onClick={async () => {
             setIsTimeInLoading(true);
             await formik.setFieldValue('action', 'TIME_IN');
@@ -162,7 +158,7 @@ export default function Timesheet() {
         <Button
           variant="default"
           type="button"
-          className="p-3 w-full bg-[var(--dark-grey)] text-white rounded-md hover:bg-gradient-to-r from-green-400 to-teal-600 transition-colors duration-300 border border-white hover:border-black"
+          className="p-3 w-full bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black"
           onClick={async () => {
             setIsBreakLoading(true);
             await formik.setFieldValue('action', 'BREAK');
@@ -177,7 +173,7 @@ export default function Timesheet() {
         <Button
           variant="default"
           type="button"
-          className="p-3 w-full bg-[var(--dark-grey)] text-white rounded-md hover:bg-gradient-to-r from-red-400 to-pink-600 transition-colors duration-300 border border-white hover:border-black"
+          className="p-3 w-full bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black"
           onClick={async () => {
             setIsTimeOutLoading(true);
             await formik.setFieldValue('action', 'TIME_OUT');

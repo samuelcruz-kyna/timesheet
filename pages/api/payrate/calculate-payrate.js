@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
-import { employeePayrateFormSchema } from '@/utils/validation-schema';
+import { employeePayrateFormSchema } from '@lib/validation/validation-schema';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 
 const prisma = new PrismaClient();
@@ -9,7 +9,6 @@ export default async function handler(req, res) {
   try {
     // 1. Validate the data using the "employeePayrateFormSchema".
     const validatedData = await employeePayrateFormSchema.validate(req.body);
-
     const { payRate, payRateSchedule, effectiveDate } = validatedData;
 
     // 2. Get the current user and employeeId.
@@ -18,9 +17,29 @@ export default async function handler(req, res) {
     const employee = await prisma.employee.findUnique({
       where: { employeeNo },
     });
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
     const employeeId = employee.id;
 
-    // 3. Fetch all daily summaries of this employee where date is the effectiveDate
+    // 3. Save the payRate, payRateSchedule, and effectiveDate of this user in PayRate table. Upsert it so there will be only 1 record.
+    await prisma.payRate.upsert({
+      where: { employeeId },
+      update: {
+        payRate,
+        payRateSchedule,
+        effectiveDate: effectiveDate,
+        updatedAt: new Date(),
+      },
+      create: {
+        employeeId,
+        payRate,
+        payRateSchedule,
+        effectiveDate: effectiveDate,
+      },
+    });
+
+    // 4. Fetch all daily summaries of this employee where date is the effectiveDate
     const dailySummaries = await prisma.dailySummary.findMany({
       where: {
         employeeId: employeeId,
@@ -30,7 +49,7 @@ export default async function handler(req, res) {
       }
     });  
 
-    // 4. Process the payroll calculations.
+    // 5. Process the payroll calculations. Aside from employeeId, date, and payAmoumt, you will put dailySummaryId too for each.
     const paymentRecords = [];
 
     for (const summary of dailySummaries) {
@@ -52,6 +71,7 @@ export default async function handler(req, res) {
       console.log("Upsert Data:", {
         employeeId: employeeId,
         date: summary.date,
+        dailySummaryId: summary.id,
         payAmount: payAmount,
       });
       
@@ -70,6 +90,7 @@ export default async function handler(req, res) {
         create: {
           employeeId: employeeId,
           date: summary.date,
+          dailySummaryId: summary.id,
           payAmount: payAmount,
         },
       });

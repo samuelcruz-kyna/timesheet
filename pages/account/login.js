@@ -22,9 +22,7 @@ export default function Login() {
       try {
         const res = await fetch('/api/auth/manage', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'read',
             username: values.username,
@@ -56,12 +54,12 @@ export default function Login() {
   });
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-[var(--background)] text-[var(--foreground)] font-helvetica">
+    <div className="flex flex-col justify-center items-center min-h-screen font-satoshi-regular">
       <NavBar />
       <form onSubmit={formik.handleSubmit} className="p-8 rounded-lg max-w-lg w-full shadow-md border border-gray-700 space-y-6">
-        <h1 className="text-center text-5xl font-extrabold uppercase">Login</h1>
+        <h1 className="text-center text-5xl font-satoshi-bold uppercase">Login</h1>
         <p className="text-center">
-          Don&apos;t have an account? <Link href="/account/register" className="underline text-white">Register</Link>
+          Don&apos;t have an account? <Link href="/account/register" className="underline text-black">Register</Link>
         </p>
 
         {/* Username Input */}
@@ -74,7 +72,7 @@ export default function Login() {
             onBlur={formik.handleBlur}
             value={formik.values.username}
             placeholder="Username"
-            className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500"
+            className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500"
           />
           {formik.touched.username && formik.errors.username && (
             <p className="text-red-500 text-sm">{formik.errors.username}</p>
@@ -91,7 +89,7 @@ export default function Login() {
             onBlur={formik.handleBlur}
             value={formik.values.password}
             placeholder="Password"
-            className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500"
+            className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500"
           />
           {formik.touched.password && formik.errors.password && (
             <p className="text-red-500 text-sm">{formik.errors.password}</p>
@@ -99,7 +97,11 @@ export default function Login() {
         </div>
 
         {/* Submit Button */}
-        <Button className="w-full bg-[#444] hover:bg-[#555] rounded-md transition-all duration-300" type="submit" disabled={formik.isSubmitting}>
+        <Button 
+          className="w-full p-3 bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black" 
+          type="submit" 
+          disabled={formik.isSubmitting}
+        >
           Login
         </Button>
         

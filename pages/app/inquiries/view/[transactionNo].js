@@ -48,10 +48,10 @@ export default function InquiryDetails() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--background)] text-[var(--foreground)] font-helvetica">
+    <div className="flex flex-col min-h-screen font-satoshi-regular">
       <NavBar />
       <div className="flex flex-col items-center justify-center h-screen">
-        <h1 className="text-center text-5xl font-extrabold uppercase mt-12 mb-8">Inquiry Details</h1>
+        <h1 className="text-center text-5xl font-satoshi-bold uppercase mt-12 mb-8">Inquiry Details</h1>
         <div className="p-8 rounded-lg max-w-4xl w-full shadow-md border border-gray-700">
           {inquiry && (
             <div className="space-y-4">
@@ -67,9 +67,7 @@ export default function InquiryDetails() {
               <p><strong>Modified:</strong> {new Date(inquiry.modified).toLocaleString()}</p>
             </div>
           )}
-          <Button className="mt-8 hover:bg-gray-700 text-white px-4 py-2 rounded-md" onClick={handleGoBack}>
-            ← Back to Inquiries
-          </Button>
+          <Button className="mt-8" onClick={handleGoBack}>← Back to Inquiries</Button>
         </div>
       </div>
     </div>

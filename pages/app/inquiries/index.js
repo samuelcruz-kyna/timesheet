@@ -11,10 +11,9 @@ export default function Inquiries() {
   const [error, setError] = useState(null);
   const router = useRouter();
 
-  // Fetch inquiries from the API
   const fetchInquiries = async () => {
     try {
-      setLoading(true); // Set loading state
+      setLoading(true);
       const response = await fetch("/api/inquiries");
 
       if (!response.ok) {
@@ -22,98 +21,92 @@ export default function Inquiries() {
       }
 
       const data = await response.json();
-      setInquiries(data); // Set the fetched data
+      setInquiries(data);
     } catch (err) {
-      setError(err.message); // Set error state
+      setError(err.message);
     } finally {
-      setLoading(false); // Always set loading to false after the request completes
+      setLoading(false);
     }
   };
 
-  // Call the fetch function on component mount
   useEffect(() => {
     fetchInquiries();
   }, []);
 
-  // Navigate to the inquiry details page
   const handleViewDetails = (transactionNo) => {
     router.push(routes.viewInquiries.replace("[transactionNo]", transactionNo));
   };
 
-  // Navigate to the inquiry edit page
   const handleEditInquiry = (transactionNo) => {
     router.push(routes.editInquiries.replace("[transactionNo]", transactionNo));
   };
 
-  // Render loading message
   if (loading) {
     return <div className="text-center mt-24">Loading inquiries...</div>;
   }
-  
-  // Render error message
+
   if (error) {
     return <div className="text-center mt-24 text-red-500">Error: {error}</div>;
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--background)] text-[var(--foreground)] font-helvetica">
+    <div className="flex flex-col min-h-screen font-satoshi-regular">
       <NavBar />
-      <h1 className="text-center text-5xl font-extrabold uppercase mt-24 mb-12">Inquiries</h1>
+      <h1 className="text-center text-5xl font-satoshi-bold uppercase mt-24 mb-12">Inquiries</h1>
 
+      {/* The container wrapping the table, with a fixed height and scroll overflow */}
       <div className="container mx-auto p-8 rounded-xl border border-gray-700">
-        <Table className="w-full table-auto">
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead>ID</TableHead>
-              <TableHead className="w-32">First Name</TableHead>
-              <TableHead className="w-24">Last Name</TableHead>
-              <TableHead>Contact No</TableHead>
-              <TableHead>Email Address</TableHead>
-              <TableHead>Subject</TableHead>
-              <TableHead>Message</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Transaction No</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Modified</TableHead>
-              <TableHead>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {inquiries.map((inquiry) => (
-              <TableRow key={inquiry.transactionNo} className="hover:bg-transparent">
-                <TableCell>{inquiry.id}</TableCell>
-                <TableCell>{inquiry.firstName}</TableCell>
-                <TableCell>{inquiry.lastName}</TableCell>
-                <TableCell>{inquiry.contactNo}</TableCell>
-                <TableCell>{inquiry.emailAddress}</TableCell>
-                <TableCell>{inquiry.subject}</TableCell>
-                <TableCell>
-                  {inquiry.message.length > 100
-                    ? inquiry.message.substr(0, 100) + '...'
-                    : inquiry.message}
-                </TableCell>
-                <TableCell>{inquiry.status}</TableCell>
-                <TableCell>{inquiry.transactionNo}</TableCell>
-                <TableCell>{new Date(inquiry.created).toLocaleString()}</TableCell>
-                <TableCell>{new Date(inquiry.modified).toLocaleString()}</TableCell>
-                <TableCell className="flex flex-col gap-2">
-                  <Button
-                    className="w-full bg-[var(--dark-grey)] rounded transition-colors duration-300 hover:bg-white hover:text-black text-white border border-white hover:border-black"
-                    onClick={() => handleViewDetails(inquiry.transactionNo)}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    className="w-full bg-[var(--dark-grey)] rounded transition-colors duration-300 hover:bg-white hover:text-black text-white border border-white hover:border-black"
-                    onClick={() => handleEditInquiry(inquiry.transactionNo)}
-                  >
-                    Edit
-                  </Button>
-                </TableCell>
+        <div className="max-h-[400px] overflow-y-auto">
+          <Table className="w-full table-auto">
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
+                <TableHead>Contact No</TableHead>
+                <TableHead>Email Address</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>Message</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Transaction No</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Modified</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {inquiries.map((inquiry) => (
+                <TableRow key={inquiry.transactionNo}>
+                  <TableCell>{inquiry.id}</TableCell>
+                  <TableCell>{inquiry.firstName}</TableCell>
+                  <TableCell>{inquiry.lastName}</TableCell>
+                  <TableCell>{inquiry.contactNo}</TableCell>
+                  <TableCell>{inquiry.emailAddress}</TableCell>
+                  <TableCell>{inquiry.subject}</TableCell>
+                  <TableCell>{inquiry.message.length > 100 ? `${inquiry.message.substr(0, 100)}...` : inquiry.message}</TableCell>
+                  <TableCell>{inquiry.status}</TableCell>
+                  <TableCell>{inquiry.transactionNo}</TableCell>
+                  <TableCell>{new Date(inquiry.created).toLocaleString()}</TableCell>
+                  <TableCell>{new Date(inquiry.modified).toLocaleString()}</TableCell>
+                  <TableCell className="space-y-2">
+                    <Button 
+                      className="w-full p-2 bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black" 
+                      onClick={() => handleViewDetails(inquiry.transactionNo)}
+                    >
+                      View Details
+                    </Button>
+                    <Button 
+                      className="w-full p-2 bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black" 
+                      onClick={() => handleEditInquiry(inquiry.transactionNo)}
+                    >
+                      Edit
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

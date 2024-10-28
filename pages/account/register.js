@@ -35,9 +35,7 @@ export default function Register() {
 
         const res = await fetch('/api/auth/manage', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(postData),
         });
 
@@ -64,12 +62,12 @@ export default function Register() {
   });
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-screen bg-[var(--background)] text-[var(--foreground)] font-helvetica">
+    <div className="flex flex-col justify-center items-center min-h-screen font-satoshi-regular">
       <NavBar />
-      <form onSubmit={formik.handleSubmit} className=" p-8 rounded-lg max-w-lg w-full shadow-md border border-gray-700 space-y-6">
-        <h1 className="text-center text-5xl font-extrabold uppercase">Register</h1>
+      <form onSubmit={formik.handleSubmit} className="p-8 rounded-lg max-w-lg w-full shadow-md border border-gray-700 space-y-6">
+        <h1 className="text-center text-5xl font-satoshi-bold uppercase">Register</h1>
         <p className="text-center">
-          Already have an account? <Link href="/account/login" className="underline text-white">Login</Link>
+          Already have an account? <Link href="/account/login" className="underline text-black">Login</Link>
         </p>
 
         {/* First Name Input */}
@@ -82,7 +80,7 @@ export default function Register() {
             onBlur={formik.handleBlur}
             value={formik.values.firstName}
             placeholder="First Name"
-            className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500"
+            className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500"
           />
           {formik.touched.firstName && formik.errors.firstName && (
             <p className="text-red-500 text-sm">{formik.errors.firstName}</p>
@@ -99,7 +97,7 @@ export default function Register() {
             onBlur={formik.handleBlur}
             value={formik.values.lastName}
             placeholder="Last Name"
-            className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500"
+            className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500"
           />
           {formik.touched.lastName && formik.errors.lastName && (
             <p className="text-red-500 text-sm">{formik.errors.lastName}</p>
@@ -109,13 +107,13 @@ export default function Register() {
         {/* Gender Select Input */}
         <div className="space-y-2">
           <Select onValueChange={(value) => formik.setFieldValue("gender", value)} value={formik.values.gender}>
-            <SelectTrigger className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500">
+            <SelectTrigger className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500">
               <SelectValue placeholder="Select Gender" />
             </SelectTrigger>
-            <SelectContent className="bg-[#222] rounded-md">
-              <SelectItem className="hover:bg-gray-700 text-white font-bold" value="MALE">Male</SelectItem>
-              <SelectItem className="hover:bg-gray-700 text-white font-bold" value="FEMALE">Female</SelectItem>
-              <SelectItem className="hover:bg-gray-700 text-white font-bold" value="OTHER">Other</SelectItem>
+            <SelectContent className="rounded-md">
+              <SelectItem className="hover:bg-gray-700 text-black font-bold" value="MALE">Male</SelectItem>
+              <SelectItem className="hover:bg-gray-700 text-black font-bold" value="FEMALE">Female</SelectItem>
+              <SelectItem className="hover:bg-gray-700 text-black font-bold" value="OTHER">Other</SelectItem>
             </SelectContent>
           </Select>
           {formik.touched.gender && formik.errors.gender && (
@@ -133,7 +131,7 @@ export default function Register() {
             onBlur={formik.handleBlur}
             value={formik.values.username}
             placeholder="Username"
-            className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500"
+            className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500"
           />
           {formik.touched.username && formik.errors.username && (
             <p className="text-red-500 text-sm">{formik.errors.username}</p>
@@ -150,7 +148,7 @@ export default function Register() {
             onBlur={formik.handleBlur}
             value={formik.values.password}
             placeholder="Password"
-            className="p-3 w-full border rounded-md bg-[#444] text-white focus:ring focus:ring-gray-500"
+            className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500"
           />
           {formik.touched.password && formik.errors.password && (
             <p className="text-red-500 text-sm">{formik.errors.password}</p>
@@ -158,7 +156,11 @@ export default function Register() {
         </div>
 
         {/* Submit Button */}
-        <Button className="w-full bg-[#444] hover:bg-[#555] rounded-md transition-all duration-300" type="submit" disabled={formik.isSubmitting}>
+        <Button 
+          className="w-full p-3 bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black" 
+          type="submit" 
+          disabled={formik.isSubmitting}
+        >
           Register
         </Button>
 
