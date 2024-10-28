@@ -23,19 +23,16 @@ function formatWeekRange(startDate, endDate) {
   const start = new Date(startDate).toLocaleDateString('en-US', startOptions);
   const end = new Date(endDate).toLocaleDateString('en-US', endOptions);
 
-  if (startDate.getMonth() === endDate.getMonth()) {
-    return `${start} to ${end}`;
-  } else {
-    return `${start} to ${end}`;
-  }
+  return `${start} to ${end}`;
 }
 
 // Helper function to get the Monday of the week for a given date
 function getMonday(d) {
   d = new Date(d);
-  const day = d.getDay(),
-    diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
-  return new Date(d.setDate(diff));
+  const day = d.getUTCDay();
+  const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+  d.setUTCDate(diff);
+  return d;
 }
 
 // Function to group payment records by week
@@ -44,40 +41,36 @@ function groupByWeek(records) {
 
   const weeks = [];
   let currentWeek = [];
-  let currentMonday = getMonday(new Date(records[0].date)); // Start with the first Monday
+  let currentMonday = getMonday(new Date(records[0].date));
   let currentSunday = new Date(currentMonday);
-  currentSunday.setDate(currentMonday.getDate() + 6); // Set to the next Sunday
+  currentSunday.setUTCDate(currentMonday.getUTCDate() + 6);
 
   records.forEach((record) => {
     const recordDate = new Date(record.date);
 
-    // Check if the record's date is within the current week
     if (recordDate >= currentMonday && recordDate <= currentSunday) {
       currentWeek.push(record);
     } else {
-      // Push the current week data if not empty
       if (currentWeek.length > 0) {
         weeks.push({
           date: formatWeekRange(currentMonday, currentSunday),
           payAmount: currentWeek.reduce((sum, r) => sum + r.payAmount, 0),
+          duration: currentWeek.reduce((sum, r) => sum + (r.dailySummary?.totalTime || 0) / 3600, 0),
         });
       }
 
-      // Reset the week to the new Monday
       currentMonday = getMonday(recordDate);
       currentSunday = new Date(currentMonday);
-      currentSunday.setDate(currentMonday.getDate() + 6);
-
-      // Start a new week
+      currentSunday.setUTCDate(currentMonday.getUTCDate() + 6);
       currentWeek = [record];
     }
   });
 
-  // Push the last week if it has any records
   if (currentWeek.length > 0) {
     weeks.push({
       date: formatWeekRange(currentMonday, currentSunday),
       payAmount: currentWeek.reduce((sum, r) => sum + r.payAmount, 0),
+      duration: currentWeek.reduce((sum, r) => sum + (r.dailySummary?.totalTime || 0) / 3600, 0),
     });
   }
 
@@ -90,27 +83,25 @@ function groupByMonth(records) {
 
   records.forEach((record) => {
     const date = new Date(record.date);
-    const month = date.getMonth(); // 0-11
-    const year = date.getFullYear();
+    const month = date.getUTCMonth();
+    const year = date.getUTCFullYear();
     const key = `${year}-${month + 1}`;
-    const monthName = date.toLocaleString('default', { month: 'long' });
+    const monthName = date.toLocaleString('default', { month: 'long', timeZone: 'UTC' });
     const sortKey = year * 100 + (month + 1);
 
     if (!months[key]) {
       months[key] = {
         date: `${monthName} ${year}`,
         payAmount: 0,
+        duration: 0,
         sortKey,
       };
     }
     months[key].payAmount += record.payAmount;
+    months[key].duration += (record.dailySummary?.totalTime || 0) / 3600;
   });
 
-  // Convert months object to array and sort
-  const result = Object.values(months);
-  result.sort((a, b) => b.sortKey - a.sortKey);
-
-  return result;
+  return Object.values(months).sort((a, b) => b.sortKey - a.sortKey);
 }
 
 export default async function handler(req, res) {
@@ -124,14 +115,20 @@ export default async function handler(req, res) {
     const employee = await prisma.employee.findUnique({
       where: { employeeNo },
     });
-    
+
     const { filter } = req.query;
     const employeeId = employee.id;
-    
-    // Fetch payment records for the employee
+
     const paymentRecords = await prisma.paymentRecord.findMany({
       where: {
         employeeId,
+      },
+      include: {
+        dailySummary: {
+          select: {
+            totalTime: true,
+          },
+        },
       },
       orderBy: { date: 'desc' },
     });
@@ -139,29 +136,31 @@ export default async function handler(req, res) {
     let groupedRecords = [];
 
     if (filter === 'daily') {
-      // Daily records (no grouping needed)
-      groupedRecords = paymentRecords.map((record) => ({
+      groupedRecords = paymentRecords.map((record        ) => ({
         date: formatDateForDisplay(record.date),
         payAmount: record.payAmount,
+        duration: (record.dailySummary?.totalTime || 0) / 3600, // Calculate daily duration
       }));
-    } else if (filter === 'weekly') {
-      // Group records by week
-      groupedRecords = groupByWeek(paymentRecords);
-    } else if (filter === 'monthly') {
-      // Group records by month
-      groupedRecords = groupByMonth(paymentRecords);
-    } else {
-      // Default to daily if filter is invalid
-      groupedRecords = paymentRecords.map((record) => ({
-        date: formatDateForDisplay(record.date),
-        payAmount: record.payAmount,
-      }));
-    }
-
-    // Respond with the grouped payment records
-    return res.status(200).json(groupedRecords);
-  } catch (error) {
-    console.error('Error fetching payment records:', error);
-    return res.status(400).json({ message: error.message });
+  } else if (filter === 'weekly') {
+    // Group records by week
+    groupedRecords = groupByWeek(paymentRecords);
+  } else if (filter === 'monthly') {
+    // Group records by month
+    groupedRecords = groupByMonth(paymentRecords);
+  } else {
+    // Default to daily if filter is invalid
+    groupedRecords = paymentRecords.map((record) => ({
+      date: formatDateForDisplay(record.date),
+      payAmount: record.payAmount,
+      duration: (record.dailySummary?.totalTime || 0) / 3600, // Calculate daily duration
+    }));
   }
+
+  // Respond with the grouped payment records
+  return res.status(200).json(groupedRecords);
+} catch (error) {
+  console.error('Error fetching payment records:', error);
+  return res.status(400).json({ message: error.message });
 }
+}
+
