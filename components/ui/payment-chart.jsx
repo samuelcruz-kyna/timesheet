@@ -21,16 +21,67 @@ export function PaymentChart() {
       setLoading(true);
       try {
         const response = await fetch(`/api/payrate/get-payments?filter=${filter}`);
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`Failed to fetch data: ${response.statusText}`);
+        }
 
-        // Format dates to "MMM D" format
-        const formattedData = data.map((item) => ({
-          ...item,
-          date: new Date(item.date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          }),
-        }));
+        const data = await response.json();
+        console.log("Fetched data:", data);
+
+        // Ensure data is an array or access the array within a nested object
+        const records = Array.isArray(data) ? data : data.groupedRecords || [];
+
+        const formattedData = records.map((item) => {
+          let dateLabel;
+
+          const date = new Date(item.date);
+
+          if (filter === "weekly") {
+            // Weekly date parsing logic
+            console.log("Weekly item date format:", item.date);
+
+            if (!isNaN(date.getTime())) {
+              // If the date is parseable, format it directly
+              dateLabel = `Week of ${date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}`;
+            } else {
+              // Custom handling if date is in format "YYYY-Wxx"
+              const weekMatch = item.date.match(/^(\d{4})-W(\d{2})$/);
+              if (weekMatch) {
+                const year = parseInt(weekMatch[1], 10);
+                const week = parseInt(weekMatch[2], 10);
+
+                // Calculate the start date of the week
+                const firstDayOfYear = new Date(year, 0, 1);
+                const daysOffset = (week - 1) * 7;
+                const startOfWeek = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + daysOffset));
+                
+                dateLabel = `Week of ${startOfWeek.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}`;
+              } else {
+                // If no matching format is found, mark as invalid
+                dateLabel = "Invalid Date";
+              }
+            }
+          } else {
+            // For daily and monthly, parse normally
+            dateLabel = isNaN(date.getTime())
+              ? "Invalid Date"
+              : date.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+          }
+
+          return {
+            ...item,
+            date: dateLabel,
+          };
+        });
 
         setChartData(formattedData);
       } catch (error) {
@@ -43,19 +94,19 @@ export function PaymentChart() {
   }, [filter]);
 
   const getYAxisDomain = () => {
-    if (!chartData || chartData.length === 0) return [0, 'auto'];
+    if (!chartData || chartData.length === 0) return [0, "auto"];
 
     const maxPayAmount = Math.max(...chartData.map((item) => item.payAmount));
-    
+
     switch (filter) {
       case "daily":
-        return [0, maxPayAmount + 800]; // Add padding above max value for daily
+        return [0, maxPayAmount + 800];
       case "weekly":
-        return [0, 600]; // Logic from old code for weekly filter
+        return [0, 600];
       case "monthly":
-        return [0, maxPayAmount + 100]; // Add padding above max value for monthly
+        return [0, maxPayAmount + 100];
       default:
-        return [0, 'auto'];
+        return [0, "auto"];
     }
   };
 
@@ -94,14 +145,14 @@ export function PaymentChart() {
                 barCategoryGap="0%" // Removes space between bars
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" style={{ fontSize: "10px" }} /> {/* Display abbreviated date */}
+                <XAxis dataKey="date" style={{ fontSize: "10px" }} />
                 <YAxis domain={getYAxisDomain()} />
                 <Tooltip cursor={{ fill: "none" }} />
                 <Bar
                   dataKey="payAmount"
                   fill="#1F2937"
                   radius={[4, 4, 0, 0]}
-                  barSize={40} // Increase bar width to reduce gaps further
+                  barSize={40}
                 />
               </BarChart>
             </div>
