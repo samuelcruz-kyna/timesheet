@@ -7,7 +7,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import * as Yup from 'yup';
 
-// Define initial values and simplified validation schema for the payout form
+// Define initial values and validation schema for the payout form
 const initialValues = {
   payoutMethod: 'Automatic',
   payoutFrequency: '',
@@ -17,7 +17,7 @@ const initialValues = {
 
 const validationSchema = Yup.object({
   payoutMethod: Yup.string().required('Payout method is required'),
-  payoutFrequency: Yup.string().nullable(), // No conditional validation here
+  payoutFrequency: Yup.string().nullable(),
   startDate: Yup.date().nullable(),
   endDate: Yup.date().nullable(),
 });
@@ -26,9 +26,8 @@ export default function Payout() {
   const [payoutRecords, setPayoutRecords] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Function to handle form submission and validate manually based on payoutMethod
+  // Function to handle form submission and format payload correctly
   const fetchPayoutRecords = async (values) => {
-    // Manual validation for payoutMethod
     if (values.payoutMethod === 'Automatic' && !values.payoutFrequency) {
       alert("Please select a payout frequency for Automatic payout.");
       return;
@@ -38,18 +37,24 @@ export default function Payout() {
       return;
     }
 
-    console.log("Payout form submitted with values:", values); // Debugging: Log submitted values
+    console.log("Payout form submitted with values:", values); // Debugging
     setLoading(true);
+
+    // Prepare payload based on payout method
+    const payload = values.payoutMethod === 'Manual' 
+      ? { payoutMethod: values.payoutMethod, dateRange: { startDate: values.startDate, endDate: values.endDate } }
+      : { payoutMethod: values.payoutMethod, payoutFrequency: values.payoutFrequency };
+
     try {
       const response = await fetch('/api/payout/get-payout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Payout records received:", data.groupedRecords); // Debugging: Log received data
+        console.log("Payout records received:", data.groupedRecords); // Debugging
         setPayoutRecords(data.groupedRecords); // Set the fetched payout records
       } else {
         console.error('Failed to fetch payout records');
@@ -68,7 +73,7 @@ export default function Payout() {
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
-          onSubmit={fetchPayoutRecords} // Submit form values to fetch payout records
+          onSubmit={fetchPayoutRecords}
         >
           {({ setFieldValue, values }) => (
             <Form className="flex flex-col gap-6">
@@ -76,11 +81,11 @@ export default function Payout() {
               <Select
                 value={values.payoutMethod}
                 onValueChange={(value) => {
-                  console.log("Payout Method Selected:", value); // Debugging: Check selection
+                  console.log("Payout Method Selected:", value); // Debugging
                   setFieldValue('payoutMethod', value);
-                  setFieldValue('payoutFrequency', ''); // Reset payoutFrequency when switching methods
-                  setFieldValue('startDate', ''); // Reset startDate when switching methods
-                  setFieldValue('endDate', ''); // Reset endDate when switching methods
+                  setFieldValue('payoutFrequency', ''); // Reset on change
+                  setFieldValue('startDate', ''); // Reset on change
+                  setFieldValue('endDate', ''); // Reset on change
                 }}
               >
                 <SelectTrigger><SelectValue placeholder="Choose Payout Method" /></SelectTrigger>
@@ -96,7 +101,7 @@ export default function Payout() {
                 <Select
                   value={values.payoutFrequency}
                   onValueChange={(value) => {
-                    console.log("Payout Frequency Selected:", value); // Debugging: Check selection
+                    console.log("Payout Frequency Selected:", value); // Debugging
                     setFieldValue('payoutFrequency', value);
                   }}
                 >
@@ -117,7 +122,7 @@ export default function Payout() {
                   <DatePicker
                     date={values.startDate}
                     onChange={(date) => {
-                      console.log("Start Date Selected:", date); // Debugging: Check date selection
+                      console.log("Start Date Selected:", date); // Debugging
                       setFieldValue('startDate', date);
                     }}
                     placeholderText="Pick a Start Date"
@@ -129,7 +134,7 @@ export default function Payout() {
                   <DatePicker
                     date={values.endDate}
                     onChange={(date) => {
-                      console.log("End Date Selected:", date); // Debugging: Check date selection
+                      console.log("End Date Selected:", date); // Debugging
                       setFieldValue('endDate', date);
                     }}
                     placeholderText="Pick an End Date"
