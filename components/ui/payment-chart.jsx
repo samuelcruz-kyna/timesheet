@@ -22,7 +22,17 @@ export function PaymentChart() {
       try {
         const response = await fetch(`/api/payrate/get-payments?filter=${filter}`);
         const data = await response.json();
-        setChartData(data);
+
+        // Format dates to "MMM D" format
+        const formattedData = data.map((item) => ({
+          ...item,
+          date: new Date(item.date).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+        }));
+
+        setChartData(formattedData);
       } catch (error) {
         console.error("Error fetching payment data:", error);
       } finally {
@@ -33,13 +43,17 @@ export function PaymentChart() {
   }, [filter]);
 
   const getYAxisDomain = () => {
+    if (!chartData || chartData.length === 0) return [0, 'auto'];
+
+    const maxPayAmount = Math.max(...chartData.map((item) => item.payAmount));
+    
     switch (filter) {
       case "daily":
-        return [0, 120];
+        return [0, maxPayAmount + 800]; // Add padding above max value for daily
       case "weekly":
-        return [0, 600];
+        return [0, 600]; // Logic from old code for weekly filter
       case "monthly":
-        return [0, 2000];
+        return [0, maxPayAmount + 100]; // Add padding above max value for monthly
       default:
         return [0, 'auto'];
     }
@@ -70,23 +84,28 @@ export function PaymentChart() {
         {loading ? (
           <div>Loading chart data...</div>
         ) : (
-          <BarChart
-            width={400}
-            height={300}
-            data={chartData}
-            margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis domain={getYAxisDomain()} />
-            <Tooltip cursor={{ fill: "none" }} />
-            <Bar
-              dataKey="payAmount"
-              fill="#1F2937"
-              radius={[4, 4, 0, 0]} // Adjusted to subtle rounded corners at the top
-              barSize={20}
-            />
-          </BarChart>
+          <div style={{ overflowX: "auto" }}>
+            <div style={{ minWidth: "600px" }}>
+              <BarChart
+                width={600}
+                height={300}
+                data={chartData}
+                margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
+                barCategoryGap="0%" // Removes space between bars
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" style={{ fontSize: "10px" }} /> {/* Display abbreviated date */}
+                <YAxis domain={getYAxisDomain()} />
+                <Tooltip cursor={{ fill: "none" }} />
+                <Bar
+                  dataKey="payAmount"
+                  fill="#1F2937"
+                  radius={[4, 4, 0, 0]}
+                  barSize={40} // Increase bar width to reduce gaps further
+                />
+              </BarChart>
+            </div>
+          </div>
         )}
       </CardContent>
       <CardFooter>

@@ -81,6 +81,7 @@ model PaymentRecord {
   date           DateTime
   payAmount      Float
   dailySummaryId Int           @unique
+  status         PaymentStatus @default(Unpaid) // New status field with default "Unpaid"
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -122,4 +123,9 @@ enum TimesheetType {
   TIME_IN
   TIME_OUT
   BREAK
+}
+
+enum PaymentStatus {
+  Paid
+  Unpaid
 }
