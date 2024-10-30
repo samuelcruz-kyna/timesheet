@@ -102,7 +102,7 @@ export function PaymentChart() {
       case "daily":
         return [0, maxPayAmount + 800];
       case "weekly":
-        return [0, 600];
+        return [0, 100];
       case "monthly":
         return [0, maxPayAmount + 100];
       default:

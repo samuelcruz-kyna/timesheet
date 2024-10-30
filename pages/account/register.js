@@ -110,10 +110,10 @@ export default function Register() {
             <SelectTrigger className="p-3 w-full border rounded-md text-black focus:ring focus:ring-gray-500">
               <SelectValue placeholder="Select Gender" />
             </SelectTrigger>
-            <SelectContent className="rounded-md">
-              <SelectItem className="hover:bg-gray-700 text-black font-bold" value="MALE">Male</SelectItem>
-              <SelectItem className="hover:bg-gray-700 text-black font-bold" value="FEMALE">Female</SelectItem>
-              <SelectItem className="hover:bg-gray-700 text-black font-bold" value="OTHER">Other</SelectItem>
+            <SelectContent className="rounded-md bg-white">
+              <SelectItem className="text-black font-bold" value="MALE">Male</SelectItem>
+              <SelectItem className="text-black font-bold" value="FEMALE">Female</SelectItem>
+              <SelectItem className="text-black font-bold" value="OTHER">Other</SelectItem>
             </SelectContent>
           </Select>
           {formik.touched.gender && formik.errors.gender && (

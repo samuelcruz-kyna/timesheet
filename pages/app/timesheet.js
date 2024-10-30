@@ -1,28 +1,38 @@
-import { useState, useEffect, useCallback } from "react"; 
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from '@/components/ui/button';
 import { useFormik } from 'formik';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import NavBar from '@/components/ui/navBar';
+import * as XLSX from "xlsx"; // Import xlsx library
 
 export default function Timesheet() {
   const { data: session, status } = useSession();
-  const [lastAction, setLastAction] = useState(''); 
-  const [dailySummaries, setDailySummaries] = useState([]); 
-  const [loading, setLoading] = useState(true); 
 
-  // Define loading states
+  // Define state variables
+  const [lastAction, setLastAction] = useState('');
+  const [dailySummaries, setDailySummaries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showUploadBox, setShowUploadBox] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState(null); // State for success/error message
+
+  // Loading states for actions
   const [isTimeInLoading, setIsTimeInLoading] = useState(false);
   const [isBreakLoading, setIsBreakLoading] = useState(false);
   const [isTimeOutLoading, setIsTimeOutLoading] = useState(false);
+
+  const fileInputRef = useRef(null);
 
   const fetchTimesheetData = useCallback(async () => {
     if (session) {
       try {
         const res = await fetch('/api/timesheet/summary');
         const data = await res.json();
-        setLastAction(data.lastAction || ''); 
-        setDailySummaries(data.dailySummaries || []); 
+        setLastAction(data.lastAction || '');
+        setDailySummaries(data.dailySummaries || []);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching timesheet data:', error);
@@ -36,9 +46,7 @@ export default function Timesheet() {
   }, [session, fetchTimesheetData]);
 
   const formik = useFormik({
-    initialValues: {
-      action: '',
-    },
+    initialValues: { action: '' },
     onSubmit: async (values) => {
       try {
         if (!session && status !== 'loading') {
@@ -47,12 +55,8 @@ export default function Timesheet() {
         }
         const res = await fetch('/api/timesheet/insert', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: values.action,
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: values.action }),
         });
 
         if (!res.ok) {
@@ -67,6 +71,99 @@ export default function Timesheet() {
       }
     },
   });
+
+  // Function to handle file import
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    processFile(file);
+  };
+
+  const processFile = async (file) => {
+    if (!file) return;
+
+    setIsImporting(true);
+    setImportMessage(null); // Clear previous messages
+
+    // Validate if the uploaded file is an Excel file
+    if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      setError("Please upload a valid Excel file (.xlsx or .xls)");
+      setIsImporting(false);
+      return;
+    }
+    setError(null); // Clear any previous error
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      try {
+        // Send imported data to backend for processing
+        const response = await fetch('/api/timesheet/insert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ logs: jsonData })
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          setImportMessage("Import successful");
+          await fetchTimesheetData(); // Refresh table data
+        } else {
+          setImportMessage(`Import error: ${result.message}`);
+        }
+      } catch (err) {
+        console.error("Error during import:", err);
+        setImportMessage("Import failed. Please try again.");
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Drag-and-drop event handlers
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    setIsDragOver(false);
+    const file = event.dataTransfer.files[0];
+    processFile(file);
+  };
+
+  // Function to open the file dialog
+  const openFileDialog = () => {
+    fileInputRef.current.click();
+  };
+
+  // Function to export the timesheet data to Excel
+  const exportToExcel = () => {
+    const ws = XLSX.utils.json_to_sheet(dailySummaries.map((summary, index) => ({
+      ID: index + 1,
+      "Employee Name": summary.fullName,
+      Date: convertDateToLocal(summary.date),
+      Duration: summary.totalTime,
+      "Time Span": convertTimeSpanToLocal(summary.timeSpan),
+      "Created At": convertDateToLocal(summary.createdAt),
+      "Updated At": convertDateToLocal(summary.updatedAt),
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Timesheet");
+
+    // Save the file
+    XLSX.writeFile(wb, "Timesheet.xlsx");
+  };
 
   // Define disabled button states
   const isTimeInDisabled = lastAction === 'TIME_IN' || lastAction === 'TIME_OUT';
@@ -83,6 +180,57 @@ export default function Timesheet() {
       <NavBar />
       <h1 className="text-center text-5xl font-satoshi-bold uppercase mt-24 mb-12">Daily Timesheet</h1>
 
+      {/* Import Logs and Export Timesheet Buttons */}
+      <div className="flex justify-center gap-5 mb-8">
+        <Button
+          variant="default"
+          className="p-3 w-xl bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black"
+          onClick={() => setShowUploadBox(!showUploadBox)}
+        >
+          Import Logs
+        </Button>
+        <Button
+          variant="default"
+          className="p-3 w-xl bg-[#171717] text-white rounded-md hover:bg-gray-600 hover:text-white transition-colors duration-300 border border-black"
+          onClick={exportToExcel}
+        >
+          Export Timesheet
+        </Button>
+      </div>
+
+      {/* Conditional rendering of the drag-and-drop box */}
+      {showUploadBox && (
+        <div
+          onClick={openFileDialog}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`border-2 border-dashed p-8 rounded-md text-center cursor-pointer ${
+            isDragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+          } mb-4`}
+        >
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+            accept=".xlsx, .xls"
+          />
+          {isImporting ? (
+            <p>Loading... Importing file</p>
+          ) : (
+            <p>Drag and drop an Excel file here, or click to select</p>
+          )}
+        </div>
+      )}
+
+      {/* Display import success/error message */}
+      {importMessage && <p className="text-center text-green-500 mb-4">{importMessage}</p>}
+
+      {/* Display error message if file is not an Excel file */}
+      {error && <p className="text-center text-red-500 mb-4">{error}</p>}
+
+      {/* Timesheet Table */}
       <div className="container mx-auto p-8 rounded-xl border border-black">
         <Table className="w-full table-auto border-collapse">
           <TableHeader>
@@ -197,6 +345,7 @@ function convertTimeSpanToLocal(timeSpan) {
   const localStartTime = new Date(`1970-01-01T${convertTo24HourFormat(startTimeUTC)}Z`).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit', // Include seconds
   });
 
   if (!endTimeUTC) {
@@ -206,6 +355,7 @@ function convertTimeSpanToLocal(timeSpan) {
   const localEndTime = new Date(`1970-01-01T${convertTo24HourFormat(endTimeUTC)}Z`).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit', // Include seconds
   });
 
   return `${localStartTime} to ${localEndTime}`;
