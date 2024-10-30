@@ -28,47 +28,57 @@ export function PaymentChart() {
         const data = await response.json();
         console.log("Fetched data:", data);
 
-        // Ensure data is an array or access the array within a nested object
         const records = Array.isArray(data) ? data : data.groupedRecords || [];
 
         const formattedData = records.map((item) => {
           let dateLabel;
 
-          const date = new Date(item.date);
+          // Split date range if applicable
+          const dateString = item.date;
+          const dateParts = dateString.split(" to ");
+
+          // Try to parse the first date in the range
+          const date = new Date(dateParts[0]);
+          console.log("Parsing date:", dateString, "Parsed date:", date);
 
           if (filter === "weekly") {
-            // Weekly date parsing logic
-            console.log("Weekly item date format:", item.date);
-
             if (!isNaN(date.getTime())) {
-              // If the date is parseable, format it directly
-              dateLabel = `Week of ${date.toLocaleDateString("en-US", {
+              const startOfWeek = new Date(date);
+              const endOfWeek = new Date(date);
+              startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+              endOfWeek.setDate(endOfWeek.getDate() + (6 - endOfWeek.getDay()));
+
+              dateLabel = `${startOfWeek.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })} to ${endOfWeek.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               })}`;
             } else {
-              // Custom handling if date is in format "YYYY-Wxx"
-              const weekMatch = item.date.match(/^(\d{4})-W(\d{2})$/);
+              const weekMatch = dateString.match(/^(\d{4})-W(\d{2})$/);
               if (weekMatch) {
                 const year = parseInt(weekMatch[1], 10);
                 const week = parseInt(weekMatch[2], 10);
-
-                // Calculate the start date of the week
                 const firstDayOfYear = new Date(year, 0, 1);
                 const daysOffset = (week - 1) * 7;
                 const startOfWeek = new Date(firstDayOfYear.setDate(firstDayOfYear.getDate() + daysOffset));
-                
-                dateLabel = `Week of ${startOfWeek.toLocaleDateString("en-US", {
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+                dateLabel = `${startOfWeek.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })} to ${endOfWeek.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}`;
               } else {
-                // If no matching format is found, mark as invalid
+                console.warn("Invalid date format:", dateString);
                 dateLabel = "Invalid Date";
               }
             }
           } else {
-            // For daily and monthly, parse normally
             dateLabel = isNaN(date.getTime())
               ? "Invalid Date"
               : date.toLocaleDateString("en-US", {
@@ -141,8 +151,8 @@ export function PaymentChart() {
                 width={600}
                 height={300}
                 data={chartData}
-                margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-                barCategoryGap="0%" // Removes space between bars
+                margin={{ top: 20, right: 10, left: 10, bottom: 20 }} // Adjust margins if necessary
+                barCategoryGap="5%" // Adjust the gap between bars
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" style={{ fontSize: "10px" }} />
@@ -152,7 +162,7 @@ export function PaymentChart() {
                   dataKey="payAmount"
                   fill="#1F2937"
                   radius={[4, 4, 0, 0]}
-                  barSize={40}
+                  barSize={50}
                 />
               </BarChart>
             </div>
