@@ -162,7 +162,7 @@ export function PaymentChart() {
                   dataKey="payAmount"
                   fill="#1F2937"
                   radius={[4, 4, 0, 0]}
-                  barSize={50}
+                  barSize={40}
                 />
               </BarChart>
             </div>
